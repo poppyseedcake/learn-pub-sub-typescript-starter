@@ -1,6 +1,7 @@
 import amqp from "amqplib";
 import { publishJSON } from "../internal/pubsub/publish.js";
 import { ExchangePerilDirect, PauseKey } from "../internal/routing/routing.js";
+import { getInput, printServerHelp } from "../internal/gamelogic/gamelogic.js";
 
 async function main() {
   const rabbitConnString = "amqp://guest:guest@localhost:5672/";
@@ -29,6 +30,41 @@ async function main() {
   } catch (err) {
     console.error("Error publishing message:", err);
   }
+
+  printServerHelp();
+  while (1) {
+    const input = await getInput();
+    if (input.length === 0) {
+      continue;
+    }
+    if (input[0] === "pause") {
+      console.log("Sending pause message..");
+      try {
+        await publishJSON(publishCh, ExchangePerilDirect, PauseKey, {
+          isPaused: true,
+        });
+      } catch (err) {
+        console.error("Error publishing message:", err);
+      }
+
+    } else if (input[0] === "resume") {
+      console.log("Sending resume message..");
+      try {
+        await publishJSON(publishCh, ExchangePerilDirect, PauseKey, {
+          isPaused: false,
+        });
+      } catch (err) {
+        console.error("Error publishing message:", err);
+      }
+
+    } else if (input[0] === "quit") {
+      console.log("Exiting...");
+      break;
+    } else {
+      console.log("WTF do you mean?");
+    }
+  }
+
 }
 
 main().catch((err) => {
