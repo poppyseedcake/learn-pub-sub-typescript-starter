@@ -23,48 +23,38 @@ async function main() {
 
   const publishCh = await conn.createConfirmChannel();
 
-  try {
-    await publishJSON(publishCh, ExchangePerilDirect, PauseKey, {
-      isPaused: true,
-    });
-  } catch (err) {
-    console.error("Error publishing message:", err);
-  }
-
   printServerHelp();
-  while (1) {
-    const input = await getInput();
-    if (input.length === 0) {
-      continue;
-    }
-    if (input[0] === "pause") {
-      console.log("Sending pause message..");
+
+  while (true) {
+    const words = await getInput();
+    if (words.length === 0) continue;
+
+    const command = words[0];
+    if (command === "pause") {
+      console.log("Publishing paused game state");
       try {
         await publishJSON(publishCh, ExchangePerilDirect, PauseKey, {
           isPaused: true,
         });
       } catch (err) {
-        console.error("Error publishing message:", err);
+        console.error("Error publishing pause message:", err);
       }
-
-    } else if (input[0] === "resume") {
-      console.log("Sending resume message..");
+    } else if (command === "resume") {
+      console.log("Publishing resumed game state");
       try {
         await publishJSON(publishCh, ExchangePerilDirect, PauseKey, {
           isPaused: false,
         });
       } catch (err) {
-        console.error("Error publishing message:", err);
+        console.error("Error publishing resume message:", err);
       }
-
-    } else if (input[0] === "quit") {
-      console.log("Exiting...");
-      break;
+    } else if (command === "quit") {
+      console.log("Goodbye!");
+      process.exit(0);
     } else {
-      console.log("WTF do you mean?");
+      console.log("Unknown command");
     }
   }
-
 }
 
 main().catch((err) => {
