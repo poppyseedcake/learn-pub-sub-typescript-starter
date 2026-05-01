@@ -1,11 +1,14 @@
 import amqp from "amqplib";
 import { clientWelcome } from "../internal/gamelogic/gamelogic.js";
+import { declareAndBind, SimpleQueueType } from "../internal/pubsub/queue.js";
+import { ExchangePerilDirect, PauseKey } from "../internal/routing/routing.js";
 
 async function main() {
   const rabbitConnString = "amqp://guest:guest@localhost:5672/";
   const conn = await amqp.connect(rabbitConnString);
 
   const username = await clientWelcome();
+  await declareAndBind(conn, ExchangePerilDirect, `pause.${username}`, PauseKey, SimpleQueueType.Transient);
 
   ["SIGINT", "SIGTERM"].forEach((signal) =>
     process.on(signal, async () => {
