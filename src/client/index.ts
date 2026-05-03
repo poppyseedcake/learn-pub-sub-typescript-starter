@@ -6,12 +6,15 @@ import {
   printClientHelp,
   printQuit,
 } from "../internal/gamelogic/gamelogic.js";
-import { declareAndBind, SimpleQueueType } from "../internal/pubsub/consume.js";
+import {
+  declareAndBind,
+  SimpleQueueType,
+  subscribeJSON,
+} from "../internal/pubsub/consume.js";
 import { ExchangePerilDirect, PauseKey } from "../internal/routing/routing.js";
 import { GameState } from "../internal/gamelogic/gamestate.js";
 import { commandSpawn } from "../internal/gamelogic/spawn.js";
 import { commandMove } from "../internal/gamelogic/move.js";
-import { subscribeJSON } from "../internal/pubsub/customer.js";
 import { handlerPause } from "./handlers.js";
 
 async function main() {
@@ -33,23 +36,15 @@ async function main() {
   );
 
   const username = await clientWelcome();
-
-  await declareAndBind(
-    conn,
-    ExchangePerilDirect,
-    `${PauseKey}.${username}`,
-    PauseKey,
-    SimpleQueueType.Transient,
-  );
-
   const gs = new GameState(username);
+
   await subscribeJSON(
     conn,
     ExchangePerilDirect,
     `${PauseKey}.${username}`,
     PauseKey,
     SimpleQueueType.Transient,
-    handlerPause(gs)
+    handlerPause(gs),
   );
 
   while (true) {
