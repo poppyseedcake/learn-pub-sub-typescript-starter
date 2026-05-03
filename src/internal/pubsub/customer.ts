@@ -10,7 +10,12 @@ export async function subscribeJSON<T>(
     handler: (data: T) => void,
   ): Promise<void> {
     const [ch, queue] = await declareAndBind(conn, exchange, queueName, key, queueType);
-    ch.
+    await ch.consume(queue.queue, (msg: amqp.ConsumeMessage | null) => {
+        if (msg === null) return;
+        const parsed = JSON.parse(msg.content.toString());
+        handler(parsed);
+        ch.ack(msg);
+    })
 
   }
 
