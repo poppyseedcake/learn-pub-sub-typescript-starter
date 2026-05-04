@@ -46,6 +46,7 @@ async function main() {
     SimpleQueueType.Transient,
     handlerPause(gs),
   );
+  //
 
   while (true) {
     const words = await getInput();
