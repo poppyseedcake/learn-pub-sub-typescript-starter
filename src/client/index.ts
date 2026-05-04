@@ -11,11 +11,12 @@ import {
   SimpleQueueType,
   subscribeJSON,
 } from "../internal/pubsub/consume.js";
-import { ExchangePerilDirect, PauseKey } from "../internal/routing/routing.js";
+import { ExchangePerilDirect, ExchangePerilTopic, PauseKey } from "../internal/routing/routing.js";
 import { GameState } from "../internal/gamelogic/gamestate.js";
 import { commandSpawn } from "../internal/gamelogic/spawn.js";
-import { commandMove } from "../internal/gamelogic/move.js";
-import { handlerPause } from "./handlers.js";
+import { commandMove, handleMove } from "../internal/gamelogic/move.js";
+import { handlerMove, handlerPause } from "./handlers.js";
+import { publishJSON } from "../internal/pubsub/publish.js";
 
 async function main() {
   const rabbitConnString = "amqp://guest:guest@localhost:5672/";
@@ -46,7 +47,17 @@ async function main() {
     SimpleQueueType.Transient,
     handlerPause(gs),
   );
-  //
+
+  await subscribeJSON(
+    conn,
+    ExchangePerilTopic,
+    `army_moves.${username}`,
+    `army_moves.*`,
+    SimpleQueueType.Transient,
+    handlerMove(gs)
+  );
+
+  const publishCh = await conn.createConfirmChannel();
 
   while (true) {
     const words = await getInput();
@@ -56,7 +67,9 @@ async function main() {
     const command = words[0];
     if (command === "move") {
       try {
-        commandMove(gs, words);
+        const move = commandMove(gs, words);
+        await publishJSON(publishCh, ExchangePerilTopic,`army_moves.${username}`, move);
+        console.log("MOVE WAS PUBLISHED SUCCESSFULLY");
       } catch (err) {
         console.log((err as Error).message);
       }
