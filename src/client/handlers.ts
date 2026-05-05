@@ -13,6 +13,7 @@ export function handlerPause(gs: GameState): (ps: PlayingState) => void {
 export function handlerMove(gs: GameState): (move: ArmyMove) => void {
     return (move: ArmyMove) => {
         handleMove(gs, move);
+        console.log(`Moved ${move.units.length} units to ${move.toLocation}`);
         process.stdout.write("> ");
     }
 }
