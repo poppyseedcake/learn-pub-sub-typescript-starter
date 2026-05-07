@@ -27,4 +27,4 @@ export function handlerMove(gs: GameState): (move: ArmyMove) => AckType {
       process.stdout.write("> ");
     }
   };
-}
+}//
