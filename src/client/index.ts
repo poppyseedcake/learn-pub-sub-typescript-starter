@@ -1,4 +1,4 @@
-import amqp from "amqplib";
+import amqp, { type Channel } from "amqplib";
 import {
   clientWelcome,
   commandStatus,
@@ -11,6 +11,7 @@ import {
   ArmyMovesPrefix,
   ExchangePerilDirect,
   ExchangePerilTopic,
+  GameLogSlug,
   PauseKey,
   WarRecognitionsPrefix,
 } from "../internal/routing/routing.js";
@@ -18,7 +19,17 @@ import { GameState } from "../internal/gamelogic/gamestate.js";
 import { commandSpawn } from "../internal/gamelogic/spawn.js";
 import { commandMove } from "../internal/gamelogic/move.js";
 import { handlerMove, handlerPause, handlerWar } from "./handlers.js";
-import { publishJSON } from "../internal/pubsub/publish.js";
+import { publishJSON, publishMsgPack } from "../internal/pubsub/publish.js";
+import type { GameLog } from "../internal/gamelogic/logs.js";
+
+export async function publishGameLog(ch: amqp.ConfirmChannel, username: string, msg: string) {
+  const gamelog: GameLog = {
+    currentTime: new Date(),
+    message: msg,
+    username: username
+  };
+  await publishMsgPack(ch, ExchangePerilTopic, `${GameLogSlug}.${username}`, gamelog);
+};
 
 async function main() {
   const rabbitConnString = "amqp://guest:guest@localhost:5672/";
@@ -66,7 +77,7 @@ async function main() {
     WarRecognitionsPrefix,
     `${WarRecognitionsPrefix}.*`,
     SimpleQueueType.Durable,
-    handlerWar(gs),
+    handlerWar(gs, publishCh),
   );
 
 
