@@ -22,14 +22,24 @@ import { handlerMove, handlerPause, handlerWar } from "./handlers.js";
 import { publishJSON, publishMsgPack } from "../internal/pubsub/publish.js";
 import type { GameLog } from "../internal/gamelogic/logs.js";
 
-export async function publishGameLog(ch: amqp.ConfirmChannel, username: string, msg: string) {
-  const gamelog: GameLog = {
+export function publishGameLog(
+  ch: amqp.ConfirmChannel,
+  username: string,
+  message: string,
+): Promise<void> {
+  const log: GameLog = {
     currentTime: new Date(),
-    message: msg,
-    username: username
+    message,
+    username,
   };
-  await publishMsgPack(ch, ExchangePerilTopic, `${GameLogSlug}.${username}`, gamelog);
-};
+
+  return publishMsgPack(
+    ch,
+    ExchangePerilTopic,
+    `${GameLogSlug}.${username}`,
+    log,
+  );
+}
 
 async function main() {
   const rabbitConnString = "amqp://guest:guest@localhost:5672/";
