@@ -65,19 +65,16 @@ export async function subscribeJSON<T>(
       switch (result) {
         case AckType.Ack:
           ch.ack(msg);
-          //console.log("Ack");
           break;
         case AckType.NackDiscard:
           ch.nack(msg, false, false);
-          //console.log("NackDiscard");
           break;
         case AckType.NackRequeue:
           ch.nack(msg, false, true);
-          //console.log("NackRequeue");
           break;
         default:
           const unreachable: never = result;
-          //console.error("Unexpected ack type:", unreachable);
+          console.error("Unexpected ack type:", unreachable);
           return;
       }
     } catch (err) {
