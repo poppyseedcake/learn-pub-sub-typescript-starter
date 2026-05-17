@@ -1,3 +1,4 @@
+import { decode } from "@msgpack/msgpack";
 import amqp, { type Channel } from "amqplib";
 
 export enum SimpleQueueType {
@@ -33,33 +34,31 @@ export async function declareAndBind(
   return [ch, queue];
 }
 
-export async function subscribeJSON<T>(
+export async function subscribe<T>(
   conn: amqp.ChannelModel,
   exchange: string,
   queueName: string,
-  key: string,
-  queueType: SimpleQueueType,
+  routingKey: string,
+  simpleQueueType: SimpleQueueType,
   handler: (data: T) => Promise<AckType> | AckType,
+  deserializer: (data: Buffer) => T,
 ): Promise<void> {
   const [ch, queue] = await declareAndBind(
     conn,
     exchange,
     queueName,
-    key,
-    queueType,
+    routingKey,
+    simpleQueueType,
   );
-
   await ch.consume(queue.queue, async function (msg: amqp.ConsumeMessage | null) {
     if (!msg) return;
-
     let data: T;
     try {
-      data = JSON.parse(msg.content.toString());
+      data = deserializer(msg.content);
     } catch (err) {
       console.error("Could not unmarshal message:", err);
       return;
     }
-
     try {
       const result = await handler(data);
       switch (result) {
@@ -83,4 +82,42 @@ export async function subscribeJSON<T>(
       return;
     }
   });
+}
+
+export async function subscribeJSON<T>(
+  conn: amqp.ChannelModel,
+  exchange: string,
+  queueName: string,
+  key: string,
+  queueType: SimpleQueueType,
+  handler: (data: T) => Promise<AckType> | AckType,
+): Promise<void> {
+  return subscribe(
+    conn,
+    exchange,
+    queueName,
+    key,
+    queueType,
+    handler,
+    (data: Buffer) => JSON.parse(data.toString()),
+  );
+}
+
+export async function subscribeMsgPack<T>(
+  conn: amqp.ChannelModel,
+  exchange: string,
+  queueName: string,
+  key: string,
+  queueType: SimpleQueueType,
+  handler: (data: T) => Promise<AckType> | AckType,
+): Promise<void> {
+  return subscribe(
+    conn,
+    exchange,
+    queueName,
+    key,
+    queueType,
+    handler,
+    (data: Buffer) => decode(data) as T,
+  );
 }
