@@ -1,15 +1,15 @@
 import { decode } from "@msgpack/msgpack";
 import amqp, { type Channel } from "amqplib";
 
-export enum SimpleQueueType {
-  Durable,
-  Transient,
-}
-
 export enum AckType {
   Ack,
   NackDiscard,
   NackRequeue,
+}
+
+export enum SimpleQueueType {
+  Durable,
+  Transient,
 }
 
 export async function declareAndBind(
@@ -39,49 +39,54 @@ export async function subscribe<T>(
   exchange: string,
   queueName: string,
   routingKey: string,
-  simpleQueueType: SimpleQueueType,
+  queueType: SimpleQueueType,
   handler: (data: T) => Promise<AckType> | AckType,
-  deserializer: (data: Buffer) => T,
+  unmarshaller: (data: Buffer) => T,
 ): Promise<void> {
   const [ch, queue] = await declareAndBind(
     conn,
     exchange,
     queueName,
     routingKey,
-    simpleQueueType,
+    queueType,
   );
-  await ch.consume(queue.queue, async function (msg: amqp.ConsumeMessage | null) {
-    if (!msg) return;
-    let data: T;
-    try {
-      data = deserializer(msg.content);
-    } catch (err) {
-      console.error("Could not unmarshal message:", err);
-      return;
-    }
-    try {
-      const result = await handler(data);
-      switch (result) {
-        case AckType.Ack:
-          ch.ack(msg);
-          break;
-        case AckType.NackDiscard:
-          ch.nack(msg, false, false);
-          break;
-        case AckType.NackRequeue:
-          ch.nack(msg, false, true);
-          break;
-        default:
-          const unreachable: never = result;
-          console.error("Unexpected ack type:", unreachable);
-          return;
+
+  await ch.consume(
+    queue.queue,
+    async (msg: amqp.ConsumeMessage | null) => {
+      if (!msg) return;
+
+      let data: T;
+      try {
+        data = unmarshaller(msg.content);
+      } catch (err) {
+        console.error("Could not decode message:", err);
+        return;
       }
-    } catch (err) {
-      console.error("Error handling message:", err);
-      ch.nack(msg, false, false);
-      return;
-    }
-  });
+
+      try {
+        const result = await handler(data);
+        switch (result) {
+          case AckType.Ack:
+            ch.ack(msg);
+            break;
+          case AckType.NackDiscard:
+            ch.nack(msg, false, false);
+            break;
+          case AckType.NackRequeue:
+            ch.nack(msg, false, true);
+            break;
+          default:
+            const unreachable: never = result;
+            console.error("Unexpected ack type:", unreachable);
+        }
+      } catch (err) {
+        console.error("Error in handler:", err);
+        ch.nack(msg, false, false);
+      }
+    },
+    { noAck: false },
+  );
 }
 
 export async function subscribeJSON<T>(
@@ -92,14 +97,8 @@ export async function subscribeJSON<T>(
   queueType: SimpleQueueType,
   handler: (data: T) => Promise<AckType> | AckType,
 ): Promise<void> {
-  return subscribe(
-    conn,
-    exchange,
-    queueName,
-    key,
-    queueType,
-    handler,
-    (data: Buffer) => JSON.parse(data.toString()),
+  return subscribe(conn, exchange, queueName, key, queueType, handler, (data) =>
+    JSON.parse(data.toString()),
   );
 }
 
@@ -118,6 +117,6 @@ export async function subscribeMsgPack<T>(
     key,
     queueType,
     handler,
-    (data: Buffer) => decode(data) as T,
+    (data) => decode(data) as T,
   );
 }
