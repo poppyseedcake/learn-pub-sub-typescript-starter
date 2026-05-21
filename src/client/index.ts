@@ -3,6 +3,7 @@ import {
   clientWelcome,
   commandStatus,
   getInput,
+  getMaliciousLog,
   printClientHelp,
   printQuit,
 } from "../internal/gamelogic/gamelogic.js";
@@ -97,6 +98,11 @@ async function main() {
       continue;
     }
     const command = words[0];
+    let param = 0;
+    if (words[1] != undefined) {
+      param = parseInt(words[1]);
+    }
+
     if (command === "move") {
       try {
         const move = commandMove(gs, words);
@@ -123,7 +129,21 @@ async function main() {
       printQuit();
       process.exit(0);
     } else if (command === "spam") {
-      console.log("Spamming not allowed yet!");
+      //console.log("Spamming not allowed yet");
+      let maliciousLog = "";
+      for (let i = 0; i < param; i++) {
+        maliciousLog = getMaliciousLog();
+        publishMsgPack(
+          publishCh,
+          ExchangePerilTopic,
+          `game_logs.${username}`,
+          {
+            currentTime: new Date(),
+            message: maliciousLog,
+            username,
+          }
+        )
+      }
     } else {
       console.log("Unknown command");
       continue;
