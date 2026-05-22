@@ -41,8 +41,7 @@ export function publishGameLog(
     log,
   );
 }
-//
-//
+
 async function main() {
   const rabbitConnString = "amqp://guest:guest@localhost:5672/";
   const conn = await amqp.connect(rabbitConnString);
