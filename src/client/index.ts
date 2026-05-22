@@ -41,7 +41,8 @@ export function publishGameLog(
     log,
   );
 }
-
+//
+//
 async function main() {
   const rabbitConnString = "amqp://guest:guest@localhost:5672/";
   const conn = await amqp.connect(rabbitConnString);
@@ -129,7 +130,7 @@ async function main() {
       printQuit();
       process.exit(0);
     } else if (command === "spam") {
-      //console.log("Spamming not allowed yet");
+      //console.log("Spamming not allowed yet!");
       let maliciousLog = "";
       for (let i = 0; i < param; i++) {
         maliciousLog = getMaliciousLog();
