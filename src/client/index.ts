@@ -81,7 +81,7 @@ async function main() {
     SimpleQueueType.Transient,
     handlerPause(gs),
   );
-//
+
   await subscribeJSON(
     conn,
     ExchangePerilTopic,
